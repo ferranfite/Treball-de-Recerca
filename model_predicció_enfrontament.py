@@ -13,7 +13,7 @@ Objectius:
 - Predir resultat complet (victòria/empat/derrota)
 
 Autor: Treball de Recerca
-Data: 2024
+Data: 2025
 """
 
 # =============================================================================
@@ -91,11 +91,13 @@ for i, (variable, correlacio) in enumerate(correlacions_gols.head(6).items()):
         print(f"  {i}. {variable}: {correlacio:.3f}")
 
 # Correlacions amb victòria
-df_partits['Victory'] = (df_partits['Home Goal'] > df_partits['Away Goal']).astype(int)
-correlacions_victoria = df_partits[numeric_columns].corr()['Victory'].sort_values(ascending=False)
+df_partits['Victòries'] = (df_partits['Home Goal'] > df_partits['Away Goal']).astype(int)
+# Afegim 'Victòries' a les columnes numèriques per a les correlacions
+numeric_columns_with_Victòries = numeric_columns.tolist() + ['Victòries']
+correlacions_victoria = df_partits[numeric_columns_with_Victòries].corr()['Victòries'].sort_values(ascending=False)
 print("\n🎯 Top 5 correlacions amb victòria local:")
 for i, (variable, correlacio) in enumerate(correlacions_victoria.head(6).items()):
-    if variable != 'Victory':
+    if variable != 'Victòries':
         print(f"  {i}. {variable}: {correlacio:.3f}")
 
 # =============================================================================
@@ -148,7 +150,7 @@ print(f"📊 Features dels equips: {len([col for col in df_complet.columns if co
 print("\n🎯 Creant variables objectiu...")
 
 # Variables objectiu
-df_complet['Victory'] = (df_complet['Home Goal'] > df_complet['Away Goal']).astype(int)
+df_complet['Victòries'] = (df_complet['Home Goal'] > df_complet['Away Goal']).astype(int)
 df_complet['Draw'] = (df_complet['Home Goal'] == df_complet['Away Goal']).astype(int)
 df_complet['Total_Goals'] = df_complet['Home Goal'] + df_complet['Away Goal']
 df_complet['Goal_Difference'] = df_complet['Home Goal'] - df_complet['Away Goal']
@@ -166,7 +168,7 @@ df_complet['Result'] = df_complet.apply(crear_resultat_categoric, axis=1)
 
 # Mostrem estadístiques
 print("\n📈 Estadístiques de les variables objectiu:")
-print(f"- Victòries locals: {df_complet['Victory'].sum()} ({df_complet['Victory'].mean():.1%})")
+print(f"- Victòries locals: {df_complet['Victòries'].sum()} ({df_complet['Victòries'].mean():.1%})")
 print(f"- Empats: {df_complet['Draw'].sum()} ({df_complet['Draw'].mean():.1%})")
 print(f"- Gols totals (mitjana): {df_complet['Total_Goals'].mean():.2f}")
 print(f"- Corners (mitjana): {df_complet['wonCorners'].mean():.1f}")
@@ -195,10 +197,10 @@ features_equips = [col for col in df_complet.columns if col.startswith('Home_') 
 X_features = features_partit + features_equips
 
 # Dataset final per al model
-df_model = df_complet[X_features + ['Victory', 'Total_Goals', 'wonCorners', 'Result']].dropna()
+df_model = df_complet[X_features + ['Victòries', 'Total_Goals', 'wonCorners', 'Result']].dropna()
 
 X = df_model[X_features]
-y_victory = df_model['Victory']
+y_Victòries = df_model['Victòries']
 y_goals = df_model['Total_Goals']
 y_corners = df_model['wonCorners']
 y_result = df_model['Result']
@@ -217,8 +219,8 @@ print("=" * 50)
 # Divisió de dades
 print("🔄 Dividint dades en entrenament i test...")
 
-X_train, X_test, y_victory_train, y_victory_test = train_test_split(
-    X, y_victory, test_size=0.2, random_state=42, stratify=y_victory
+X_train, X_test, y_Victòries_train, y_Victòries_test = train_test_split(
+    X, y_Victòries, test_size=0.2, random_state=42, stratify=y_Victòries
 )
 
 _, _, y_goals_train, y_goals_test = train_test_split(
@@ -242,11 +244,11 @@ print("=" * 50)
 
 # Model 1: Predicció de victòria
 print("\n1️⃣ Model de Predicció de Victòria")
-model_victory = RandomForestClassifier(n_estimators=100, random_state=42)
-model_victory.fit(X_train, y_victory_train)
-victory_pred = model_victory.predict(X_test)
-victory_accuracy = accuracy_score(y_victory_test, victory_pred)
-print(f"   ✅ Precisió: {victory_accuracy:.3f}")
+model_Victòries = RandomForestClassifier(n_estimators=100, random_state=42)
+model_Victòries.fit(X_train, y_Victòries_train)
+Victòries_pred = model_Victòries.predict(X_test)
+Victòries_accuracy = accuracy_score(y_Victòries_test, Victòries_pred)
+print(f"   ✅ Precisió: {Victòries_accuracy:.3f}")
 
 # Model 2: Predicció de gols totals
 print("\n2️⃣ Model de Predicció de Gols Totals")
@@ -283,9 +285,9 @@ print("\n🔍 ANÀLISI D'IMPORTÀNCIA DE FEATURES")
 print("=" * 50)
 
 # Obtenim importància per a cada model
-feature_importance_victory = pd.DataFrame({
+feature_importance_Victòries = pd.DataFrame({
     'feature': X_features,
-    'importance': model_victory.feature_importances_
+    'importance': model_Victòries.feature_importances_
 }).sort_values('importance', ascending=False)
 
 feature_importance_goals = pd.DataFrame({
@@ -294,7 +296,7 @@ feature_importance_goals = pd.DataFrame({
 }).sort_values('importance', ascending=False)
 
 print("\n🏆 Top 10 features per a predicció de victòria:")
-for i, row in feature_importance_victory.head(10).iterrows():
+for i, row in feature_importance_Victòries.head(10).iterrows():
     print(f"  {i+1:2d}. {row['feature']:<25} {row['importance']:.4f}")
 
 print("\n⚽ Top 10 features per a predicció de gols:")
@@ -352,7 +354,7 @@ def predicir_partit(equip_local, equip_visitant, df_classificacio, df_model, X_f
     X_prediccio = df_prediccio[X_features]
     
     # Fem prediccions
-    prob_victory = models['victory'].predict_proba(X_prediccio)[0][1]
+    prob_Victòries = models['Victòries'].predict_proba(X_prediccio)[0][1]
     pred_goals = models['goals'].predict(X_prediccio)[0]
     pred_corners = models['corners'].predict(X_prediccio)[0]
     pred_result = models['result'].predict(X_prediccio)[0]
@@ -360,7 +362,7 @@ def predicir_partit(equip_local, equip_visitant, df_classificacio, df_model, X_f
     return {
         'equip_local': equip_local,
         'equip_visitant': equip_visitant,
-        'probabilitat_victoria_local': f"{prob_victory:.1%}",
+        'probabilitat_victoria_local': f"{prob_Victòries:.1%}",
         'gols_totals_previstos': f"{pred_goals:.1f}",
         'corners_previstos': f"{pred_corners:.1f}",
         'resultat_previst': pred_result
@@ -368,7 +370,7 @@ def predicir_partit(equip_local, equip_visitant, df_classificacio, df_model, X_f
 
 # Diccionari amb els models
 models = {
-    'victory': model_victory,
+    'Victòries': model_Victòries,
     'goals': model_goals,
     'corners': model_corners,
     'result': model_result
@@ -417,13 +419,13 @@ print(f"  - Predicció de corners (Regressió)")
 print(f"  - Predicció de resultat (Classificació multiclasse)")
 
 print(f"\n📈 Rendiment dels models:")
-print(f"  - Precisió victòria: {victory_accuracy:.1%}")
+print(f"  - Precisió victòria: {Victòries_accuracy:.1%}")
 print(f"  - RMSE gols: {np.sqrt(goals_mse):.2f}")
 print(f"  - RMSE corners: {np.sqrt(corners_mse):.2f}")
 print(f"  - Precisió resultat: {result_accuracy:.1%}")
 
 print(f"\n🎯 Variables més importants:")
-print(f"  - Per victòria: {feature_importance_victory.iloc[0]['feature']}")
+print(f"  - Per victòria: {feature_importance_Victòries.iloc[0]['feature']}")
 print(f"  - Per gols: {feature_importance_goals.iloc[0]['feature']}")
 
 print(f"\n✅ El model està llest per a fer prediccions!")
