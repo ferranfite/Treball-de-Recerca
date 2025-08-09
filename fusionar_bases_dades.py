@@ -51,20 +51,77 @@ df_classificacio_combinada = pd.concat([df_23_24_classificacio, df_24_25_classif
 # Eliminar columna Temporada per evitar problemes
 df_classificacio_combinada = df_classificacio_combinada.drop('Temporada', axis=1, errors='ignore')
 
-# Identificar columnes numèriques (excloent 'Team')
-columnes_numeriques = []
-for col in df_classificacio_combinada.columns:
-    if col != 'Team' and df_classificacio_combinada[col].dtype in ['int64', 'float64']:
-        columnes_numeriques.append(col)
+# Identificar columnes per sumar (valors enters) i per recalcular (percentatges)
+print("📊 Identificant columnes per sumar i recalcular...")
 
-print(f"Columnes numèriques identificades: {len(columnes_numeriques)}")
+# Columnes que són valors enters (sumar)
+columnes_enters = [
+    'MP', 'Victory', 'Empats', 'Derrotes', 'GF', 'GA', 'GD', 'Clean Sheets',
+    'Home MP', 'Home Win', 'Home Draw', 'Home Loss', 'Home GF', 'Home GA', 'Home Clean Sheets'
+]
+
+# Columnes que són percentatges (recalcular després)
+columnes_percentatges = [
+    '%_Victories', '%_Empats', '%_Derrotes', '%_CS',
+    '%_HomeWin', '%_HomeDraw', '%_HomeLoss', '%_HomeGoals'
+]
+
+# Columnes que són mitjanes (recalcular després)
+columnes_mitjanes = [
+    'M_GolsF', 'M_GolsC', 'M_HomeGF'
+]
 
 # Crear diccionari d'agregacions
 agg_dict = {}
-for col in columnes_numeriques:
-    agg_dict[col] = 'sum'
+
+# Sumar només els valors enters
+for col in columnes_enters:
+    if col in df_classificacio_combinada.columns:
+        agg_dict[col] = 'sum'
+
+# Per percentatges i mitjanes, agafar el primer valor (es recalcularan després)
+for col in columnes_percentatges + columnes_mitjanes:
+    if col in df_classificacio_combinada.columns:
+        agg_dict[col] = 'first'
+
+print(f"Columnes enters a sumar: {len([col for col in columnes_enters if col in df_classificacio_combinada.columns])}")
+print(f"Columnes percentatges a recalcular: {len([col for col in columnes_percentatges if col in df_classificacio_combinada.columns])}")
 
 df_classificacio_fusionada = df_classificacio_combinada.groupby('Team').agg(agg_dict).reset_index()
+
+# Recalcular percentatges i mitjanes
+print("🔄 Recalculant percentatges i mitjanes...")
+
+for idx, row in df_classificacio_fusionada.iterrows():
+    # Percentatges generals
+    if 'Victory' in row and 'MP' in row and row['MP'] > 0:
+        df_classificacio_fusionada.loc[idx, '%_Victories'] = row['Victory'] / row['MP']
+        df_classificacio_fusionada.loc[idx, '%_Empats'] = row['Empats'] / row['MP']
+        df_classificacio_fusionada.loc[idx, '%_Derrotes'] = row['Derrotes'] / row['MP']
+    
+    # Percentatges de clean sheets
+    if 'Clean Sheets' in row and 'MP' in row and row['MP'] > 0:
+        df_classificacio_fusionada.loc[idx, '%_CS'] = row['Clean Sheets'] / row['MP']
+    
+    # Percentatges de casa
+    if 'Home Win' in row and 'Home MP' in row and row['Home MP'] > 0:
+        df_classificacio_fusionada.loc[idx, '%_HomeWin'] = row['Home Win'] / row['Home MP']
+        df_classificacio_fusionada.loc[idx, '%_HomeDraw'] = row['Home Draw'] / row['Home MP']
+        df_classificacio_fusionada.loc[idx, '%_HomeLoss'] = row['Home Loss'] / row['Home MP']
+    
+    # Percentatges de gols a casa
+    if 'Home GF' in row and 'GF' in row and row['GF'] > 0:
+        df_classificacio_fusionada.loc[idx, '%_HomeGoals'] = row['Home GF'] / row['GF']
+    
+    # Mitjanes
+    if 'GF' in row and 'MP' in row and row['MP'] > 0:
+        df_classificacio_fusionada.loc[idx, 'M_GolsF'] = row['GF'] / row['MP']
+    if 'GA' in row and 'MP' in row and row['MP'] > 0:
+        df_classificacio_fusionada.loc[idx, 'M_GolsC'] = row['GA'] / row['MP']
+    if 'Home GF' in row and 'Home MP' in row and row['Home MP'] > 0:
+        df_classificacio_fusionada.loc[idx, 'M_HomeGF'] = row['Home GF'] / row['Home MP']
+
+print("✅ Percentatges i mitjanes recalculats correctament")
 
 # Ordenar per victòries de més a menys
 df_classificacio_fusionada = df_classificacio_fusionada.sort_values('Victory', ascending=False).reset_index(drop=True)
