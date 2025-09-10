@@ -12,7 +12,23 @@ df_24_25_classificacio = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_L
 df_24_25_partits = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_Liga-2024-2025.xlsx', sheet_name='StatsPartit')
 
 df_25_26_classificacio = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_Liga-2025-2026.xlsx', sheet_name='ClassificacióGeneral')
+df_25_26_classificacio = df_25_26_classificacio.drop('Points', axis=1, errors='ignore')
+# Renombrar columnes específiques: win, draw, loss -> Victory, Empats, Derrotes
+rename_map_25_26 = {}
+for col in df_25_26_classificacio.columns:
+    key = col.lower() if isinstance(col, str) else col
+    if key == 'win':
+        rename_map_25_26[col] = 'Victory'
+    elif key == 'draw':
+        rename_map_25_26[col] = 'Empats'
+    elif key == 'loss':
+        rename_map_25_26[col] = 'Derrotes'
+if rename_map_25_26:
+    df_25_26_classificacio = df_25_26_classificacio.rename(columns=rename_map_25_26)
 df_25_26_partits = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_Liga-2025-2026.xlsx', sheet_name='StatsPartit')
+
+df_equips_ascendits_classificacio = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_Liga-EquipsAscendits.xlsx', sheet_name='ClassificacióGeneral')
+df_equips_ascendits_partits = pd.read_excel('BDD_EntrenamentModel_Estadístiques-La_Liga-EquipsAscendits.xlsx', sheet_name='StatsPartit')
 
 # Afegir columna temporada
 df_23_24_classificacio['Temporada'] = '2023-2024'
@@ -21,12 +37,14 @@ df_24_25_classificacio['Temporada'] = '2024-2025'
 df_24_25_partits['Temporada'] = '2024-2025'
 df_25_26_classificacio['Temporada'] = '2025-2026'
 df_25_26_partits['Temporada'] = '2025-2026'
+df_equips_ascendits_classificacio['Temporada'] = 'Ascendits'
+df_equips_ascendits_partits['Temporada'] = 'Ascendits'
 
 # Fusionar partits
-df_partits_fusionada = pd.concat([df_23_24_partits, df_24_25_partits, df_25_26_partits], ignore_index=True, sort=False)
+df_partits_fusionada = pd.concat([df_23_24_partits, df_24_25_partits, df_25_26_partits, df_equips_ascendits_partits], ignore_index=True, sort=False)
 
 # Fusionar classificacions
-df_classificacio_combinada = pd.concat([df_23_24_classificacio, df_24_25_classificacio, df_25_26_classificacio], ignore_index=True, sort=False)
+df_classificacio_combinada = pd.concat([df_23_24_classificacio, df_24_25_classificacio, df_25_26_classificacio, df_equips_ascendits_classificacio], ignore_index=True, sort=False)
 df_classificacio_combinada = df_classificacio_combinada.drop('Temporada', axis=1, errors='ignore')
 
 # Definir columnes enters, percentatges i mitjanes
